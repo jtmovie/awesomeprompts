@@ -45,7 +45,7 @@ jobs:
           PROMPTS_SYNC_SECRET: ${{ secrets.PROMPTS_SYNC_SECRET }}
           ISSUE_NUMBER: ${{ inputs.issue_number }}
         run: |
-          DATA=$(gh issue view "$ISSUE_NUMBER" --json number,body,url,author)
+          DATA=$(gh issue view "$ISSUE_NUMBER" -R jtmovie/awesomeprompts --json number,body,url,author)
           jq -n --argjson issue "$DATA" '{
             issueBody: $issue.body,
             issueNumber: $issue.number,
