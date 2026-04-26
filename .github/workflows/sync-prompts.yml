@@ -36,11 +36,11 @@ jobs:
           PROMPTS_SYNC_SECRET: ${{ secrets.PROMPTS_SYNC_SECRET }}
           ISSUE_NUMBER: ${{ inputs.issue_number }}
         run: |
-          DATA=$(gh issue view "$ISSUE_NUMBER" --json number,body,htmlUrl,author)
+          DATA=$(gh issue view "$ISSUE_NUMBER" --json number,body,url,author)
           jq -n --argjson issue "$DATA" '{
             issueBody: $issue.body,
             issueNumber: $issue.number,
-            issueUrl: $issue.htmlUrl,
+            issueUrl: $issue.url,
             issueAuthor: $issue.author.login,
             issueAuthorUrl: ("https://github.com/" + $issue.author.login)
           }' > payload.json
