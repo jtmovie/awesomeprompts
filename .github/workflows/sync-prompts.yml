@@ -1,0 +1,51 @@
+name: Sync Prompts to Website
+
+on:
+  issues:
+    types: [opened, edited, labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Issue Number"
+        required: true
+
+permissions:
+  issues: read
+
+jobs:
+  sync:
+    if: github.event_name == 'workflow_dispatch' || contains(toJson(github.event.issue.labels.*.name), 'prompt-submission')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync from issue event
+        if: github.event_name == 'issues'
+        env:
+          PROMPTS_SYNC_ENDPOINT: ${{ secrets.PROMPTS_SYNC_ENDPOINT }}
+          PROMPTS_SYNC_SECRET: ${{ secrets.PROMPTS_SYNC_SECRET }}
+        run: |
+          curl -fsS -X POST "$PROMPTS_SYNC_ENDPOINT" \
+            -H "Authorization: Bearer $PROMPTS_SYNC_SECRET" \
+            -H "Content-Type: application/json" \
+            --data @"$GITHUB_EVENT_PATH"
+
+      - name: Sync from manual issue number
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROMPTS_SYNC_ENDPOINT: ${{ secrets.PROMPTS_SYNC_ENDPOINT }}
+          PROMPTS_SYNC_SECRET: ${{ secrets.PROMPTS_SYNC_SECRET }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          DATA=$(gh issue view "$ISSUE_NUMBER" --json number,body,htmlUrl,author)
+          jq -n --argjson issue "$DATA" '{
+            issueBody: $issue.body,
+            issueNumber: $issue.number,
+            issueUrl: $issue.htmlUrl,
+            issueAuthor: $issue.author.login,
+            issueAuthorUrl: ("https://github.com/" + $issue.author.login)
+          }' > payload.json
+
+          curl -fsS -X POST "$PROMPTS_SYNC_ENDPOINT" \
+            -H "Authorization: Bearer $PROMPTS_SYNC_SECRET" \
+            -H "Content-Type: application/json" \
+            --data @payload.json
