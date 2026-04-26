@@ -23,10 +23,19 @@ jobs:
           PROMPTS_SYNC_ENDPOINT: ${{ secrets.PROMPTS_SYNC_ENDPOINT }}
           PROMPTS_SYNC_SECRET: ${{ secrets.PROMPTS_SYNC_SECRET }}
         run: |
-          curl -fsS -X POST "$PROMPTS_SYNC_ENDPOINT" \
+          response_file=$(mktemp)
+          status=$(curl -sS -o "$response_file" -w "%{http_code}" -X POST "$PROMPTS_SYNC_ENDPOINT" \
             -H "Authorization: Bearer $PROMPTS_SYNC_SECRET" \
             -H "Content-Type: application/json" \
-            --data @"$GITHUB_EVENT_PATH"
+            --data @"$GITHUB_EVENT_PATH")
+
+          cat "$response_file"
+          echo
+          echo "HTTP status: $status"
+
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            exit 1
+          fi
 
       - name: Sync from manual issue number
         if: github.event_name == 'workflow_dispatch'
@@ -45,7 +54,16 @@ jobs:
             issueAuthorUrl: ("https://github.com/" + $issue.author.login)
           }' > payload.json
 
-          curl -fsS -X POST "$PROMPTS_SYNC_ENDPOINT" \
+          response_file=$(mktemp)
+          status=$(curl -sS -o "$response_file" -w "%{http_code}" -X POST "$PROMPTS_SYNC_ENDPOINT" \
             -H "Authorization: Bearer $PROMPTS_SYNC_SECRET" \
             -H "Content-Type: application/json" \
-            --data @payload.json
+            --data @payload.json)
+
+          cat "$response_file"
+          echo
+          echo "HTTP status: $status"
+
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            exit 1
+          fi
